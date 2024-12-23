@@ -1,0 +1,7 @@
+services:
+  frontend:
+    image: "767397741479.dkr.ecr.us-east-1.amazonaws.com/microstore:frontend-76677c303c42aca6ff23365140d0a57a232ff912"
+  product:
+    image: "767397741479.dkr.ecr.us-east-1.amazonaws.com/microstore:product-service-76677c303c42aca6ff23365140d0a57a232ff912"
+  order:
+    image: "767397741479.dkr.ecr.us-east-1.amazonaws.com/microstore:order-service-76677c303c42aca6ff23365140d0a57a232ff912"
