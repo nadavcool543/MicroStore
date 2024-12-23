@@ -1,15 +1,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: product-service
+  name: {{ .Values.services.product.name }}
   labels:
-    app: product-service
+    app: {{ .Values.services.product.name }}
 spec:
   type: ClusterIP
   ports:
-    - port: 8080
-      targetPort: 8080
+    - port: {{ .Values.services.product.port }}
+      targetPort: {{ .Values.services.product.port }}
       protocol: TCP
       name: http
   selector:
-    app: product-service 
+    app: {{ .Values.services.product.name }} 

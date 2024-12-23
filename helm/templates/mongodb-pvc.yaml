@@ -1,10 +1,14 @@
+{{- if and .Values.mongodb.enabled .Values.mongodb.persistence.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mongodb-pvc
+  labels:
+    app: {{ .Values.mongodb.name }}
 spec:
   accessModes:
-    - ReadWriteOnce
+    - {{ .Values.mongodb.persistence.accessMode }}
   resources:
     requests:
-      storage: 10Gi
+      storage: {{ .Values.mongodb.persistence.size }}
+{{- end }}

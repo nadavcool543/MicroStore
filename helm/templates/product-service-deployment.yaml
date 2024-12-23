@@ -1,31 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: product-service
+  name: {{ .Values.services.product.name }}
   labels:
-    app: product-service
+    app: {{ .Values.services.product.name }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.services.product.replicas }}
   selector:
     matchLabels:
-      app: product-service
+      app: {{ .Values.services.product.name }}
   template:
     metadata:
       labels:
-        app: product-service
+        app: {{ .Values.services.product.name }}
     spec:
       containers:
-        - name: product-service
+        - name: {{ .Values.services.product.name }}
           image: {{ .Values.services.product.image }}
           ports:
-            - containerPort: 8080
+            - containerPort: {{ .Values.services.product.port }}
           env:
             - name: SPRING_DATA_MONGODB_URI
-              value: mongodb://mongodb:27017/product-service
+              value: {{ .Values.services.product.mongodb.uri }}
           resources:
-            limits:
-              cpu: 1000m
-              memory: 1Gi
-            requests:
-              cpu: 500m
-              memory: 512Mi
+            {{- toYaml .Values.services.product.resources | nindent 12 }}
