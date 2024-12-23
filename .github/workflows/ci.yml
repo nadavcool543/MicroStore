@@ -19,24 +19,19 @@ jobs:
           sudo apt-get install -y docker-compose
 
       - name: Build and start services
-        run: |
-          cd MicroStore
-          docker-compose up -d --build
+        run: docker-compose up -d --build
 
       - name: Wait for services to be ready
         run: sleep 30
 
       - name: Run tests
         run: |
-          cd MicroStore
           docker-compose exec -T product-service npm test
           docker-compose exec -T order-service npm test
           docker-compose exec -T frontend npm test
 
       - name: Cleanup
-        run: |
-          cd MicroStore
-          docker-compose down
+        run: docker-compose down
          
   deploy:
     runs-on: ubuntu-latest
@@ -69,6 +64,5 @@ jobs:
           REPOSITORY: microstore
           IMAGE_TAG: ${{ matrix.service }}-${{ github.sha }}
         run: |
-          cd MicroStore
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG ./${{ matrix.service }}/.
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG 
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
