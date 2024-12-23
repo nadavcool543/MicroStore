@@ -115,6 +115,7 @@ jobs:
           yq eval ".services.\"product-service\".image = \"${{ env.product-service_IMAGE_URI }}\"" -i values.yaml
           yq eval ".services.\"order-service\".image = \"${{ env.order-service_IMAGE_URI }}\"" -i values.yaml
 
+
       - name: Commit and push changes
         run: |
           cd gitops-repo
