@@ -47,6 +47,10 @@ jobs:
     if: github.event_name == 'push'
     env:
       AWS_REGION: us-east-1
+    outputs:
+      frontend_IMAGE_URI: ${{ steps.build-push.outputs.frontend_IMAGE_URI }}
+      product-service_IMAGE_URI: ${{ steps.build-push.outputs.product-service_IMAGE_URI }}
+      order-service_IMAGE_URI: ${{ steps.build-push.outputs.order-service_IMAGE_URI }}
 
     strategy:
       matrix:
@@ -67,6 +71,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build, tag, and push image to ECR
+        id: build-push
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: microstore
@@ -75,8 +80,8 @@ jobs:
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG ./${{ matrix.service }}/.
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
           
-          # Save the image URI for GitOps update with service name as prefix
-          echo "${{ matrix.service }}_IMAGE_URI=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+          # Save the image URI as output
+          echo "${{ matrix.service }}_IMAGE_URI=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   update-gitops:
     needs: deploy
@@ -111,10 +116,9 @@ jobs:
           cd gitops-repo/environments/${{ steps.env.outputs.ENV_NAME }}
           
           # Update each service with its specific image URI
-          yq eval ".services.frontend.image = \"${{ env.frontend_IMAGE_URI }}\"" -i values.yaml
-          yq eval ".services.\"product-service\".image = \"${{ env.product-service_IMAGE_URI }}\"" -i values.yaml
-          yq eval ".services.\"order-service\".image = \"${{ env.order-service_IMAGE_URI }}\"" -i values.yaml
-
+          yq eval ".services.frontend.image = \"${{ needs.deploy.outputs.frontend_IMAGE_URI }}\"" -i values.yaml
+          yq eval ".services.\"product-service\".image = \"${{ needs.deploy.outputs.product-service_IMAGE_URI }}\"" -i values.yaml
+          yq eval ".services.\"order-service\".image = \"${{ needs.deploy.outputs.order-service_IMAGE_URI }}\"" -i values.yaml
 
       - name: Commit and push changes
         run: |
