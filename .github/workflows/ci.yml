@@ -1,0 +1,74 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Build and start services
+        run: |
+          cd MicroStore
+          docker-compose up -d --build
+
+      - name: Wait for services to be ready
+        run: sleep 30
+
+      - name: Run tests
+        run: |
+          cd MicroStore
+          docker-compose exec -T product-service npm test
+          docker-compose exec -T order-service npm test
+          docker-compose exec -T frontend npm test
+
+      - name: Cleanup
+        run: |
+          cd MicroStore
+          docker-compose down
+         
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test 
+    if: github.ref == 'refs/heads/main'
+    env:
+      AWS_REGION: us-east-1
+
+    strategy:
+      matrix:
+        service: [frontend, product-service, order-service]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: microstore
+          IMAGE_TAG: ${{ matrix.service }}-${{ github.sha }}
+        run: |
+          cd MicroStore
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG ./${{ matrix.service }}/.
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG 
