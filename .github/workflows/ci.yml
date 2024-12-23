@@ -24,11 +24,14 @@ jobs:
       - name: Wait for services to be ready
         run: sleep 30
 
-      - name: Run tests
+      - name: Run backend tests
         run: |
-          docker-compose exec -T product-service npm test
-          docker-compose exec -T order-service npm test
-          docker-compose exec -T frontend npm test
+          docker-compose exec -T product-service ./mvnw test
+          docker-compose exec -T order-service ./mvnw test
+
+      - name: Run frontend tests
+        run: |
+          docker-compose exec -T frontend sh -c "npm test -- --watchAll=false"
 
       - name: Cleanup
         run: docker-compose down
