@@ -8,6 +8,7 @@ metadata:
 spec:
   accessModes:
     - {{ .Values.mongodb.persistence.accessMode }}
+  storageClassName: ebs-gp3
   resources:
     requests:
       storage: {{ .Values.mongodb.persistence.size }}
