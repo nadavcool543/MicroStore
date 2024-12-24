@@ -1,31 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: order-service
+  name: {{ .Values.services.order.name }}
   labels:
-    app: order-service
+    app: {{ .Values.services.order.name }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.services.order.replicas }}
   selector:
     matchLabels:
-      app: order-service
+      app: {{ .Values.services.order.name }}
   template:
     metadata:
       labels:
-        app: order-service
+        app: {{ .Values.services.order.name }}
     spec:
       containers:
-        - name: order-service
+        - name: {{ .Values.services.order.name }}
           image: {{ .Values.services.order.image }}
           ports:
-            - containerPort: 8081
+            - containerPort: {{ .Values.services.order.port }}
           env:
             - name: SPRING_DATA_MONGODB_URI
-              value: mongodb://mongodb:27017/order-service
+              value: {{ .Values.services.order.mongodb.uri }}
           resources:
-            limits:
-              cpu: 1000m
-              memory: 1Gi
-            requests:
-              cpu: 500m
-              memory: 512Mi
+            {{- toYaml .Values.services.order.resources | nindent 12 }}

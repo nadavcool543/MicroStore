@@ -1,27 +1,33 @@
+{{- if .Values.mongodb.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mongodb
+  name: {{ .Values.mongodb.name }}
   labels:
-    app: mongodb
+    app: {{ .Values.mongodb.name }}
 spec:
   selector:
     matchLabels:
-      app: mongodb
+      app: {{ .Values.mongodb.name }}
   template:
     metadata:
       labels:
-        app: mongodb
+        app: {{ .Values.mongodb.name }}
     spec:
       containers:
-        - name: mongodb
-          image: mongo:latest
+        - name: {{ .Values.mongodb.name }}
+          image: {{ .Values.mongodb.image }}
           ports:
-            - containerPort: 27017
+            - containerPort: {{ .Values.mongodb.port }}
           volumeMounts:
             - name: mongodb-data
               mountPath: /data/db
       volumes:
         - name: mongodb-data
+          {{- if .Values.mongodb.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: mongodb-pvc 
+            claimName: mongodb-pvc
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+{{- end }} 

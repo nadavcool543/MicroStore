@@ -1,15 +1,17 @@
+{{- if .Values.mongodb.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: mongodb
+  name: {{ .Values.mongodb.name }}
   labels:
-    app: mongodb
+    app: {{ .Values.mongodb.name }}
 spec:
   type: ClusterIP
   ports:
-    - port: 27017
-      targetPort: 27017
+    - port: {{ .Values.mongodb.port }}
+      targetPort: {{ .Values.mongodb.port }}
       protocol: TCP
       name: mongodb
   selector:
-    app: mongodb 
+    app: {{ .Values.mongodb.name }}
+{{- end }} 
