@@ -59,6 +59,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set environment name and tag suffix
+        id: env
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "ENV_NAME=prod" >> $GITHUB_OUTPUT
+            echo "TAG_SUFFIX=prod" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+            echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
+            echo "TAG_SUFFIX=staging" >> $GITHUB_OUTPUT
+          else
+            echo "ENV_NAME=dev" >> $GITHUB_OUTPUT
+            echo "TAG_SUFFIX=dev" >> $GITHUB_OUTPUT
+          fi
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -75,7 +89,7 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: microstore
-          IMAGE_TAG: ${{ matrix.service }}-${{ github.sha }}
+          IMAGE_TAG: ${{ matrix.service }}-${{ steps.env.outputs.TAG_SUFFIX }}-${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG ./${{ matrix.service }}/.
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
@@ -95,8 +109,10 @@ jobs:
             echo "ENV_NAME=prod" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
             echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
-          else
+          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
             echo "ENV_NAME=dev" >> $GITHUB_OUTPUT
+          else
+            echo "Invalid branch for deployment" && exit 1
           fi
 
       - name: Checkout GitOps repository
@@ -117,8 +133,8 @@ jobs:
           
           # Update each service with its specific image URI
           yq eval ".services.frontend.image = \"${{ needs.deploy.outputs.frontend_IMAGE_URI }}\"" -i values.yaml
-          yq eval ".services.product.image = \"${{ needs.deploy.outputs.product-service_IMAGE_URI }}\"" -i values.yaml
-          yq eval ".services.order.image = \"${{ needs.deploy.outputs.order-service_IMAGE_URI }}\"" -i values.yaml
+          yq eval ".services.\"product-service\".image = \"${{ needs.deploy.outputs.product-service_IMAGE_URI }}\"" -i values.yaml
+          yq eval ".services.\"order-service\".image = \"${{ needs.deploy.outputs.order-service_IMAGE_URI }}\"" -i values.yaml
 
       - name: Commit and push changes
         run: |
