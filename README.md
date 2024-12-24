@@ -34,4 +34,4 @@ A modern e-commerce application built with microservices architecture using Spri
 
 ### Running the Application
 
-1. Clone the repository: 
+dev
