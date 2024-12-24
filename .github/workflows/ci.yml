@@ -68,9 +68,11 @@ jobs:
           elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
             echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
             echo "TAG_SUFFIX=staging" >> $GITHUB_OUTPUT
-          else
+          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
             echo "ENV_NAME=dev" >> $GITHUB_OUTPUT
             echo "TAG_SUFFIX=dev" >> $GITHUB_OUTPUT
+          else
+            echo "Invalid branch for deployment" && exit 1
           fi
 
       - name: Configure AWS Credentials
