@@ -26,7 +26,7 @@ spec:
         - name: mongodb-data
           {{- if .Values.mongodb.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: mongodb-pvc
+            claimName: mongodb-pvc-{{ .Release.Namespace }}
           {{- else }}
           emptyDir: {}
           {{- end }}
