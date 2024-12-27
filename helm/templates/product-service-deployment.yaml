@@ -21,6 +21,9 @@ spec:
             - containerPort: {{ .Values.services.product.port }}
           env:
             - name: SPRING_DATA_MONGODB_URI
-              value: {{ .Values.services.product.mongodb.uri }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.services.product.mongodb.secretName }}
+                  key: {{ .Values.services.product.mongodb.secretKey }}
           resources:
             {{- toYaml .Values.services.product.resources | nindent 12 }}

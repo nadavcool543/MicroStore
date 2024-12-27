@@ -25,7 +25,9 @@ services:
         cpu: 500m
         memory: 512Mi
     mongodb:
-      uri: mongodb://mongodb:27017/product-service
+      secretName: documentdb-credentials
+      secretKey: MONGODB_URI
+      dbName: product-service
 
   order:
     name: order-service
@@ -40,14 +42,10 @@ services:
         cpu: 500m
         memory: 512Mi
     mongodb:
-      uri: mongodb://mongodb:27017/order-service
+      secretName: documentdb-credentials
+      secretKey: MONGODB_URI
+      dbName: order-service
 
+# Disable local MongoDB since we're using DocumentDB
 mongodb:
-  enabled: true
-  name: mongodb
-  image: mongo:latest
-  port: 27017
-  persistence:
-    enabled: true
-    size: 10Gi
-    accessMode: ReadWriteOnce
+  enabled: false
