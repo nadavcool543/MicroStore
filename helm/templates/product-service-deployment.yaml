@@ -20,7 +20,7 @@ spec:
           ports:
             - containerPort: {{ .Values.services.product.port }}
           env:
-            - name: SPRING_DATA_MONGODB_URI
+            - name: MONGODB_DOCUMENTDB_URI
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.services.product.mongodb.secretName }}
