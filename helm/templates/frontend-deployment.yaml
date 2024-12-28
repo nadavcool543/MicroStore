@@ -19,5 +19,10 @@ spec:
           image: {{ .Values.services.frontend.image }}
           ports:
             - containerPort: {{ .Values.services.frontend.port }}
+          env:
+            - name: PRODUCT_SERVICE_URL
+              value: "http://product-service:8080"
+            - name: ORDER_SERVICE_URL
+              value: "http://order-service:8081"
           resources:
             {{- toYaml .Values.services.frontend.resources | nindent 12 }}
