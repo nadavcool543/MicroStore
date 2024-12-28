@@ -9,7 +9,5 @@ RUN mvn clean package -DskipTests
 FROM openjdk:17-jdk-slim
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-COPY ./certs/documentdb-truststore.jks /app/documentdb-truststore.jks
-ENV JAVA_OPTS="-Djavax.net.ssl.trustStore=/app/documentdb-truststore.jks -Djavax.net.ssl.trustStorePassword=changeit"
 EXPOSE 8081
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"] 
+ENTRYPOINT ["java","-jar","app.jar"] 
