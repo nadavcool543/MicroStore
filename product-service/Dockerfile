@@ -11,4 +11,7 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 COPY src/main/resources/global-bundle.pem /app/global-bundle.pem
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"] 
+ENTRYPOINT ["java", \
+            "-Djavax.net.ssl.trustStore=/app/global-bundle.pem", \
+            "-Djavax.net.ssl.trustStoreType=PEM", \
+            "-jar", "app.jar"] 
