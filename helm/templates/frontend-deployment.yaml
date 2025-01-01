@@ -26,3 +26,5 @@ spec:
               value: "http://order-service:8081"
           resources:
             {{- toYaml .Values.services.frontend.resources | nindent 12 }}
+
+ 

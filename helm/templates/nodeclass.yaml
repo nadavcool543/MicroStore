@@ -1,0 +1,34 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: {{ .Values.karpenter.nodeClass.name | default "default" }}
+  namespace: {{ .Values.karpenter.namespace | default "karpenter" }}
+spec:
+  amiSelectorTerms:
+    - alias: {{ .Values.karpenter.nodeClass.amiAlias | default "al2023@latest" }}
+
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: {{ .Values.clusterName }}
+
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: {{ .Values.clusterName }}
+
+  role: {{ .Values.karpenter.nodeClass.role | default (printf "KarpenterNodeRole-%s" .Values.clusterName) }}
+
+  blockDeviceMappings:
+    - deviceName: {{ .Values.karpenter.nodeClass.rootVolume.deviceName | default "/dev/xvda" }}
+      ebs:
+        volumeSize: {{ .Values.karpenter.nodeClass.rootVolume.size | default "50Gi" }}
+        volumeType: {{ .Values.karpenter.nodeClass.rootVolume.type | default "gp3" }}
+        encrypted: {{ .Values.karpenter.nodeClass.rootVolume.encrypted | default true }}
+
+  metadataOptions:
+    httpEndpoint: {{ .Values.karpenter.nodeClass.metadataOptions.httpEndpoint | default "enabled" }}
+    httpProtocolIPv6: {{ .Values.karpenter.nodeClass.metadataOptions.httpProtocolIPv6 | default "disabled" }}
+    httpPutResponseHopLimit: {{ .Values.karpenter.nodeClass.metadataOptions.httpPutResponseHopLimit | default 1 }}
+    httpTokens: {{ .Values.karpenter.nodeClass.metadataOptions.httpTokens | default "required" }}
+
+  tags:
+    karpenter.sh/discovery: {{ .Values.clusterName }} 
