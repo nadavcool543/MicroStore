@@ -1,11 +1,10 @@
 
 # MicroStore - Microservices E-Commerce Application
 
+![Screenshot (65)](https://github.com/user-attachments/assets/f3807034-43eb-43d0-b88b-3ccc96033841)
+
 
 A modern e-commerce application built with microservices architecture using Spring Boot and React.
-
-
-![Screenshot (65)](https://github.com/user-attachments/assets/f3807034-43eb-43d0-b88b-3ccc96033841)
 
 
 ## Services
@@ -38,6 +37,4 @@ A modern e-commerce application built with microservices architecture using Spri
 - Node.js 16+
 - MongoDB
 
-### Running the Application
 
-dev
