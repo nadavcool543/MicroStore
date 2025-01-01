@@ -1,6 +1,9 @@
+
 # MicroStore - Microservices E-Commerce Application
 
 A modern e-commerce application built with microservices architecture using Spring Boot and React.
+
+![Screenshot (65)](https://github.com/user-attachments/assets/f3807034-43eb-43d0-b88b-3ccc96033841)
 
 ## Services
 
