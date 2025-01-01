@@ -20,7 +20,10 @@ spec:
           ports:
             - containerPort: {{ .Values.services.order.port }}
           env:
-            - name: SPRING_DATA_MONGODB_URI
-              value: {{ .Values.services.order.mongodb.uri }}
+            - name: MONGODB_DOCUMENTDB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.services.order.mongodb.secretName }}
+                  key: {{ .Values.services.order.mongodb.secretKey }}
           resources:
             {{- toYaml .Values.services.order.resources | nindent 12 }}

@@ -1,0 +1,42 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: {{ .Values.karpenter.nodePool.name | default "default" }}
+  namespace: {{ .Values.karpenter.namespace | default "karpenter" }}
+spec:
+  disruption:
+    consolidateAfter: {{ .Values.karpenter.nodePool.disruption.consolidateAfter | default "30s" }}
+    consolidationPolicy: {{ .Values.karpenter.nodePool.disruption.consolidationPolicy | default "WhenEmptyOrUnderutilized" }}
+  limits:
+    cpu: {{ .Values.karpenter.nodePool.limits.cpu | default "100" | quote }}
+    memory: {{ .Values.karpenter.nodePool.limits.memory | default "400Gi" | quote }}
+  template:
+    spec:
+      nodeClassRef:
+        kind: EC2NodeClass
+        name: {{ .Values.karpenter.nodeClass.name | default "default" }}
+        group: karpenter.k8s.aws
+      requirements:
+        {{- with .Values.karpenter.nodePool.requirements }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values: ["c", "m", "r"]
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          values: ["2"]
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["large", "xlarge", "2xlarge"]
+        {{- end }}
+  weight: {{ .Values.karpenter.nodePool.weight | default 10 }} 
