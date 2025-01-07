@@ -6,6 +6,7 @@ metadata:
   labels:
     app: {{ .Values.services.frontend.name }}
     release: kube-prometheus-stack
+    app.kubernetes.io/instance: kube-prometheus-stack
 spec:
   selector:
     matchLabels:
@@ -23,6 +24,7 @@ metadata:
   labels:
     app: {{ .Values.services.product.name }}
     release: kube-prometheus-stack
+    app.kubernetes.io/instance: kube-prometheus-stack
 spec:
   selector:
     matchLabels:
@@ -40,6 +42,7 @@ metadata:
   labels:
     app: {{ .Values.services.order.name }}
     release: kube-prometheus-stack
+    app.kubernetes.io/instance: kube-prometheus-stack
 spec:
   selector:
     matchLabels:
