@@ -12,7 +12,7 @@ spec:
     matchLabels:
       app: {{ .Values.services.frontend.name }}
   endpoints:
-    - port: http
+    - targetPort: 80
       interval: 30s
       path: /metrics
 ---
@@ -30,7 +30,7 @@ spec:
     matchLabels:
       app: {{ .Values.services.product.name }}
   endpoints:
-    - port: http
+    - targetPort: 8080
       interval: 30s
       path: /metrics
 ---
@@ -48,6 +48,6 @@ spec:
     matchLabels:
       app: {{ .Values.services.order.name }}
   endpoints:
-    - port: http
+    - targetPort: 8081
       interval: 30s
       path: /metrics 
