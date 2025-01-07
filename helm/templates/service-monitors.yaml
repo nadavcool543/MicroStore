@@ -1,0 +1,50 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Values.services.frontend.name }}-monitor
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.services.frontend.name }}
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.services.frontend.name }}
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Values.services.product.name }}-monitor
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.services.product.name }}
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.services.product.name }}
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Values.services.order.name }}-monitor
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.services.order.name }}
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.services.order.name }}
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics 
