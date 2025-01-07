@@ -17,9 +17,6 @@ spec:
         name: {{ .Values.karpenter.nodeClass.name | default "default" }}
         group: karpenter.k8s.aws
       requirements:
-        {{- with .Values.karpenter.nodePool.requirements }}
-        {{- toYaml . | nindent 8 }}
-        {{- else }}
         - key: kubernetes.io/arch
           operator: In
           values: ["amd64"]
@@ -28,15 +25,11 @@ spec:
           values: ["linux"]
         - key: karpenter.sh/capacity-type
           operator: In
-          values: ["on-demand"]
-        - key: karpenter.k8s.aws/instance-category
+          values: ["spot"]
+        - key: karpenter.k8s.aws/instance-type
           operator: In
-          values: ["c", "m", "r"]
-        - key: karpenter.k8s.aws/instance-generation
-          operator: Gt
-          values: ["2"]
-        - key: karpenter.k8s.aws/instance-size
+          values: ["t3.large", "t3.xlarge", "m5.large", "m5.xlarge"]
+        - key: topology.kubernetes.io/zone
           operator: In
-          values: ["large", "xlarge", "2xlarge"]
-        {{- end }}
+          values: ["us-east-1a", "us-east-1b", "us-east-1c"]
   weight: {{ .Values.karpenter.nodePool.weight | default 10 }} 
