@@ -4,8 +4,7 @@ metadata:
   name: {{ .Values.karpenter.nodeClass.name | default "default" }}
   namespace: {{ .Values.karpenter.namespace | default "karpenter" }}
 spec:
-  amiSelectorTerms:
-    - alias: {{ .Values.karpenter.nodeClass.amiAlias | default "al2023@latest" }}
+  amiFamily: {{ .Values.karpenter.nodeClass.amiFamily | default "AL2023" }}
 
   subnetSelectorTerms:
     - tags:
