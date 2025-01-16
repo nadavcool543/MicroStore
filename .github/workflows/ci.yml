@@ -26,7 +26,7 @@ jobs:
         run: docker-compose up -d --build
       - name: Wait for services to be ready
         run: |
-          while ! curl -f http://localhost:8080/api/healthz; do sleep 5; done
+          while ! curl -f http://localhost:8080; do sleep 5; done
       - name: Test product-service
         run: |
           curl -f http://localhost:8080/api/products || exit 1
@@ -52,7 +52,7 @@ jobs:
         run: docker-compose up -d --build
       - name: Wait for services to be ready
         run: |
-          while ! curl -f http://localhost:8081/api/healthz; do sleep 5; done
+          while ! curl -f http://localhost:8081; do sleep 5; done
       - name: Test order-service
         run: |
           curl -f http://localhost:8081/api/orders || exit 1
@@ -78,7 +78,7 @@ jobs:
         run: docker-compose up -d --build
       - name: Wait for services to be ready
         run: |
-          while ! curl -f http://localhost:80/api/healthz; do sleep 5; done
+          while ! curl -f http://localhost:80; do sleep 5; done
       - name: Test frontend
         run: |
           curl -f http://localhost:80 || exit 1
@@ -119,7 +119,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::ACCOUNT_ID:role/GitHubActionsRole
+          role-to-assume: arn:aws:iam::767397741479:role/GithubRole 
           aws-region: ${{ env.AWS_REGION }}
       - name: Login to Amazon ECR
         id: login-ecr
