@@ -156,4 +156,3 @@ jobs:
           body: 'This PR updates the image tags in the GitOps repository for the ${{ steps.env.outputs.ENV_NAME }} environment.'
           branch: auto-update-${{ steps.env.outputs.ENV_NAME }}-${{ github.sha }}
           base: main
-        working-directory: gitops-repo
