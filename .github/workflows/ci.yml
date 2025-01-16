@@ -41,9 +41,13 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    outputs:
+      frontend_IMAGE_URI: ${{ steps.build-push.outputs.frontend_IMAGE_URI }}
+      product-service_IMAGE_URI: ${{ steps.build-push.outputs.product-service_IMAGE_URI }}
+      order-service_IMAGE_URI: ${{ steps.build-push.outputs.order-service_IMAGE_URI }}
     strategy:
       matrix:
-        service: [frontend, product_service, order_service]
+        service: [frontend, product-service, order-service]
     steps:
       - uses: actions/checkout@v4
       
@@ -52,9 +56,11 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::767397741479:role/GithubRole
           aws-region: ${{ env.AWS_REGION }}
+          
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+        
       - name: Build, tag, and push image to ECR
         id: build-push
         env:
@@ -73,6 +79,7 @@ jobs:
             
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
           echo "${{ matrix.service }}_IMAGE_URI=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
   update-gitops:
     needs: deploy
     runs-on: ubuntu-latest
@@ -94,8 +101,8 @@ jobs:
         run: |
           cd gitops-repo/environments/${{ github.ref_name }}
           yq eval ".services.frontend.image = \"${{ needs.deploy.outputs.frontend_IMAGE_URI }}\"" -i values.yaml
-          yq eval ".services.product.image = \"${{ needs.deploy.outputs.product_service_IMAGE_URI }}\"" -i values.yaml
-          yq eval ".services.order.image = \"${{ needs.deploy.outputs.order_service_IMAGE_URI }}\"" -i values.yaml
+          yq eval ".services.product.image = \"${{ needs.deploy.outputs.product-service_IMAGE_URI }}\"" -i values.yaml
+          yq eval ".services.order.image = \"${{ needs.deploy.outputs.order-service_IMAGE_URI }}\"" -i values.yaml
           
       - name: Commit and push changes
         run: |
