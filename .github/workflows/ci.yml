@@ -137,7 +137,7 @@ jobs:
           yq eval ".services.product.image = \"${{ needs.deploy.outputs.product-service_IMAGE_URI }}\"" -i values.yaml
           yq eval ".services.order.image = \"${{ needs.deploy.outputs.order-service_IMAGE_URI }}\"" -i values.yaml
       - name: Create PR for changes
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITOPS_PAT }}
           commit-message: Update ${{ steps.env.outputs.ENV_NAME }} environment images to ${{ github.sha }}
