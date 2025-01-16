@@ -14,11 +14,14 @@ jobs:
         service: [frontend, product-service, order-service]
     steps:
       - uses: actions/checkout@v4
+      - name: Create cache directory
+        run: mkdir -p /tmp/.buildx-cache
       - name: Cache Docker layers
         uses: actions/cache@v4
+        id: cache
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.ref }}
+          key: ${{ runner.os }}-buildx-${{ github.head_ref || github.ref_name }}
           restore-keys: |
             ${{ runner.os }}-buildx-
       - name: Set up Docker Compose
