@@ -156,3 +156,10 @@ jobs:
           body: 'This PR updates the image tags in the GitOps repository for the ${{ steps.env.outputs.ENV_NAME }} environment.'
           branch: auto-update-${{ steps.env.outputs.ENV_NAME }}-${{ github.sha }}
           base: main
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          author: nadavcool543 <6024576+nadavcool543@users.noreply.github.com>
+          signoff: false
+          delete-branch: false
+          sign-commits: false
+          draft: false
+          maintainer-can-modify: true
