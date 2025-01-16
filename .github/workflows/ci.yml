@@ -148,7 +148,7 @@ jobs:
         working-directory: gitops-repo
 
       - name: Create PR for changes
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITOPS_PAT }}
           commit-message: Update ${{ steps.env.outputs.ENV_NAME }} environment images to ${{ github.sha }}
@@ -156,4 +156,4 @@ jobs:
           body: 'This PR updates the image tags in the GitOps repository for the ${{ steps.env.outputs.ENV_NAME }} environment.'
           branch: auto-update-${{ steps.env.outputs.ENV_NAME }}-${{ github.sha }}
           base: main
-          repo: nadavcool543/gitops-repo
+        working-directory: gitops-repo
