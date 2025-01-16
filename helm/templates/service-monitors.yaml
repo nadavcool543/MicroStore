@@ -12,8 +12,8 @@ spec:
     matchLabels:
       app: {{ .Values.services.product.name }}
   endpoints:
-    - targetPort: 8080
-      interval: 30s
+    - targetPort: {{ .Values.services.product.port }}
+      interval: {{ .Values.monitoring.interval | default "30s" }}
       path: /metrics
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -30,6 +30,6 @@ spec:
     matchLabels:
       app: {{ .Values.services.order.name }}
   endpoints:
-    - targetPort: 8081
-      interval: 30s
+    - targetPort: {{ .Values.services.order.port }}
+      interval: {{ .Values.monitoring.interval | default "30s" }}
       path: /metrics 

@@ -21,28 +21,28 @@ spec:
             - containerPort: {{ .Values.services.frontend.port }}
           env:
             - name: PRODUCT_SERVICE_URL
-              value: "http://product-service:8080"
+              value: "http://{{ .Values.services.product.name }}:{{ .Values.services.product.port }}"
             - name: ORDER_SERVICE_URL
-              value: "http://order-service:8081"
+              value: "http://{{ .Values.services.order.name }}:{{ .Values.services.order.port }}"
           resources:
             {{- toYaml .Values.services.frontend.resources | nindent 12 }}
           readinessProbe:
             httpGet:
               path: /health
               port: {{ .Values.services.frontend.port }}
-            initialDelaySeconds: 10
-            periodSeconds: 5
-            timeoutSeconds: 2
-            successThreshold: 1
-            failureThreshold: 3
+            initialDelaySeconds: {{ .Values.services.frontend.probes.readiness.initialDelay | default 10 }}
+            periodSeconds: {{ .Values.services.frontend.probes.readiness.period | default 5 }}
+            timeoutSeconds: {{ .Values.services.frontend.probes.readiness.timeout | default 2 }}
+            successThreshold: {{ .Values.services.frontend.probes.readiness.successThreshold | default 1 }}
+            failureThreshold: {{ .Values.services.frontend.probes.readiness.failureThreshold | default 3 }}
           livenessProbe:
             httpGet:
               path: /health
               port: {{ .Values.services.frontend.port }}
-            initialDelaySeconds: 15
-            periodSeconds: 10
-            timeoutSeconds: 2
-            successThreshold: 1
-            failureThreshold: 3
+            initialDelaySeconds: {{ .Values.services.frontend.probes.liveness.initialDelay | default 15 }}
+            periodSeconds: {{ .Values.services.frontend.probes.liveness.period | default 10 }}
+            timeoutSeconds: {{ .Values.services.frontend.probes.liveness.timeout | default 2 }}
+            successThreshold: {{ .Values.services.frontend.probes.liveness.successThreshold | default 1 }}
+            failureThreshold: {{ .Values.services.frontend.probes.liveness.failureThreshold | default 3 }}
 
  
