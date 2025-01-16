@@ -124,7 +124,6 @@ jobs:
           repository: nadavcool543/gitops-repo
           token: ${{ secrets.GITOPS_PAT }}
           path: gitops-repo
-
       - name: Install yq
         run: |
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
@@ -132,7 +131,6 @@ jobs:
       - name: Update image tags in values.yaml
         run: |
           cd gitops-repo/environments/${{ steps.env.outputs.ENV_NAME }}
-          
           yq eval ".services.frontend.image = \"${{ needs.deploy.outputs.frontend_IMAGE_URI }}\"" -i values.yaml
           yq eval ".services.product.image = \"${{ needs.deploy.outputs.product-service_IMAGE_URI }}\"" -i values.yaml
           yq eval ".services.order.image = \"${{ needs.deploy.outputs.order-service_IMAGE_URI }}\"" -i values.yaml
