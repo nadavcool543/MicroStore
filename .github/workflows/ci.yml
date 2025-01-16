@@ -1,3 +1,4 @@
+
 name: CI/CD
 
 on:
@@ -24,22 +25,10 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.head_ref || github.ref_name }}
           restore-keys: |
             ${{ runner.os }}-buildx-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
       - name: Set up Docker Compose
         run: |
           sudo apt-get update
           sudo apt-get install -y docker-compose
-      - name: Build Docker Image with Buildx
-        run: |
-          echo "Building image for ${{ matrix.service }}"
-          docker buildx create --use --name mybuilder
-          docker buildx build \
-            --cache-from type=local,src=/tmp/.buildx-cache \
-            --cache-to type=local,dest=/tmp/.buildx-cache,mode=max \
-            --load \
-            -t myimage:${{ github.sha }} \
-            -f ./${{ matrix.service }}/Dockerfile .
       - name: Build and start services
         run: docker-compose up -d --build
       - name: Wait for services to be ready
@@ -74,8 +63,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
       - name: Set environment name and tag suffix
         id: env
         run: |
@@ -106,12 +93,7 @@ jobs:
           REPOSITORY: microstore
           IMAGE_TAG: ${{ matrix.service }}-${{ steps.env.outputs.TAG_SUFFIX }}-${{ github.sha }}
         run: |
-          docker buildx build \
-            --cache-from type=local,src=/tmp/.buildx-cache \
-            --cache-to type=local,dest=/tmp/.buildx-cache,mode=max \
-            --push \
-            -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
-            -f ./${{ matrix.service }}/Dockerfile .
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG ./${{ matrix.service }}/.
           
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image \
             --exit-code 1 \
@@ -120,8 +102,8 @@ jobs:
             --severity HIGH,CRITICAL \
             $REGISTRY/$REPOSITORY:$IMAGE_TAG
             
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
           echo "${{ matrix.service }}_IMAGE_URI=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
   update-gitops:
     needs: deploy
     runs-on: ubuntu-latest
