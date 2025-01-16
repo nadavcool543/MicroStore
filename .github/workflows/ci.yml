@@ -30,9 +30,6 @@ jobs:
           while ! curl -f http://localhost:8080/api/products; do 
             sleep 5
           done
-      - name: Test product-service
-        run: |
-          curl -f http://localhost:8080/api/products || exit 1
       - name: Cleanup
         run: docker-compose down
 
@@ -59,9 +56,6 @@ jobs:
           while ! curl -f http://localhost:8081/api/orders; do 
             sleep 5
           done
-      - name: Test order-service
-        run: |
-          curl -f http://localhost:8081/api/orders || exit 1
       - name: Cleanup
         run: docker-compose down
 
@@ -88,9 +82,6 @@ jobs:
           while ! curl -f http://localhost:80; do 
             sleep 5
           done
-      - name: Test frontend
-        run: |
-          curl -f http://localhost:80 || exit 1
       - name: Cleanup
         run: docker-compose down
 
