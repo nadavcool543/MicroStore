@@ -50,7 +50,6 @@ jobs:
         service: [frontend, product-service, order-service]
     steps:
       - uses: actions/checkout@v4
-      
       - name: Set environment name and tag suffix
         id: env
         run: |
@@ -66,17 +65,14 @@ jobs:
           else
             echo "Invalid branch for deployment" && exit 1
           fi
-          
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::767397741479:role/GithubRole
           aws-region: ${{ env.AWS_REGION }}
-          
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-        
       - name: Build, tag, and push image to ECR
         id: build-push
         env:
@@ -85,17 +81,16 @@ jobs:
           IMAGE_TAG: ${{ matrix.service }}-${{ steps.env.outputs.TAG_SUFFIX }}-${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG ./${{ matrix.service }}/.
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-          echo "${{ matrix.service }}_IMAGE_URI=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
           
-      - name: Scan image for vulnerabilities
-        run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image \
             --exit-code 1 \
             --ignore-unfixed \
             --vuln-type os,library \
             --severity HIGH,CRITICAL \
-            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}:${{ env.IMAGE_TAG }}
+            $REGISTRY/$REPOSITORY:$IMAGE_TAG
+            
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          echo "${{ matrix.service }}_IMAGE_URI=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
   update-gitops:
     needs: deploy
     runs-on: ubuntu-latest
