@@ -43,7 +43,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        service: [frontend, product-service, order-service]
+        service: [frontend, product_service, order_service]
     steps:
       - uses: actions/checkout@v4
       
@@ -94,8 +94,8 @@ jobs:
         run: |
           cd gitops-repo/environments/${{ github.ref_name }}
           yq eval ".services.frontend.image = \"${{ needs.deploy.outputs.frontend_IMAGE_URI }}\"" -i values.yaml
-          yq eval ".services.product.image = \"${{ needs.deploy.outputs.product-service_IMAGE_URI }}\"" -i values.yaml
-          yq eval ".services.order.image = \"${{ needs.deploy.outputs.order-service_IMAGE_URI }}\"" -i values.yaml
+          yq eval ".services.product.image = \"${{ needs.deploy.outputs.product_service_IMAGE_URI }}\"" -i values.yaml
+          yq eval ".services.order.image = \"${{ needs.deploy.outputs.order_service_IMAGE_URI }}\"" -i values.yaml
           
       - name: Commit and push changes
         run: |
