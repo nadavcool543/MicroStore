@@ -123,6 +123,7 @@ jobs:
             
       - name: Set output
         run: echo "${{ matrix.service }}_IMAGE_URI=${{ env.REGISTRY }}/${{ env.REPOSITORY }}:${{ env.IMAGE_TAG }}" >> $GITHUB_OUTPUT
+
   update-gitops:
     needs: deploy
     runs-on: ubuntu-latest
