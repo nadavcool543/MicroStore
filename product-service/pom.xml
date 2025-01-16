@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.4</version>
+        <version>3.2.5</version>
     </parent>
 
     <groupId>com.example</groupId>
@@ -18,19 +18,13 @@
         <java.version>17</java.version>
         <logback.version>1.4.14</logback.version>
         <snakeyaml.version>2.2</snakeyaml.version>
-        <tomcat.version>10.1.19</tomcat.version>
+        <tomcat.version>10.1.34</tomcat.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.tomcat.embed</groupId>
-                    <artifactId>tomcat-embed-core</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.tomcat.embed</groupId>
