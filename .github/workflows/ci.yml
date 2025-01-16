@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,148 +6,358 @@ on:
   pull_request:
     branches: [ dev, staging, main ]
 
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: microstore
+
 jobs:
-  test:
+  setup:
     runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Compose
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose
-      - name: Build and start services
-        run: docker-compose up -d --build
-
-      - name: Wait for services to be ready
-        run: sleep 30
-
-      - name: Check if services are running
-        run: |
-          docker-compose ps
-          
-      - name: Test product-service
-        run: |
-          curl -f http://localhost:8080/api/products || exit 1
-          
-      - name: Test order-service
-        run: |
-          curl -f http://localhost:8081/api/orders || exit 1
-          
-      - name: Test frontend
-        run: |
-          curl -f http://localhost:80 || exit 1
-      - name: Cleanup
-        run: docker-compose down
-         
-  deploy:
-    runs-on: ubuntu-latest
-    needs: test 
-    if: github.event_name == 'push'
-    env:
-      AWS_REGION: us-east-1
     outputs:
-      frontend_IMAGE_URI: ${{ steps.build-push.outputs.frontend_IMAGE_URI }}
-      product-service_IMAGE_URI: ${{ steps.build-push.outputs.product-service_IMAGE_URI }}
-      order-service_IMAGE_URI: ${{ steps.build-push.outputs.order-service_IMAGE_URI }}
+      commit_hash: ${{ steps.commit.outputs.hash }}
+      environment: ${{ steps.env.outputs.name }}
+      environment_url: ${{ steps.env.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - id: commit
+        run: echo "hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        
+      - id: env
+        run: |
+          if [[ ${{ github.ref }} == 'refs/heads/main' ]]; then
+            echo "name=prod" >> $GITHUB_OUTPUT
+          elif [[ ${{ github.ref }} == 'refs/heads/staging' ]]; then
+            echo "name=staging" >> $GITHUB_OUTPUT
+          else
+            echo "name=dev" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
-    strategy:
-      matrix:
-        service: [frontend, product-service, order-service]
+  test-frontend:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+          
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+          
+      - name: Run tests
+        run: |
+          cd frontend
+          npm test
+          
+      - name: Build frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          tags: frontend:${{ needs.setup.outputs.commit_hash }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  test-product-service:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+          
+      - name: Build and test
+        run: |
+          cd product-service
+          mvn clean verify
+          
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./product-service
+          push: false
+          tags: product-service:${{ needs.setup.outputs.commit_hash }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          
+      - name: Start service for health check
+        run: |
+          docker run -d --name product-service -p 8080:8080 product-service:${{ needs.setup.outputs.commit_hash }}
+          
+      - name: Wait for service to be healthy
+        run: |
+          timeout=30
+          while [ $timeout -gt 0 ]; do
+            if curl -s http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+              echo "Service is healthy"
+              exit 0
+            fi
+            echo "Waiting for service to be healthy... ($timeout seconds left)"
+            sleep 1
+            timeout=$((timeout-1))
+          done
+          echo "Service failed to become healthy"
+          docker logs product-service
+          exit 1
+          
+      - name: Cleanup
+        if: always()
+        run: docker rm -f product-service || true
+
+  test-order-service:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+          
+      - name: Build and test
+        run: |
+          cd order-service
+          mvn clean verify
+          
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./order-service
+          push: false
+          tags: order-service:${{ needs.setup.outputs.commit_hash }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          
+      - name: Start service for health check
+        run: |
+          docker run -d --name order-service -p 8081:8081 order-service:${{ needs.setup.outputs.commit_hash }}
+          
+      - name: Wait for service to be healthy
+        run: |
+          timeout=30
+          while [ $timeout -gt 0 ]; do
+            if curl -s http://localhost:8081/actuator/health | grep -q '"status":"UP"'; then
+              echo "Service is healthy"
+              exit 0
+            fi
+            echo "Waiting for service to be healthy... ($timeout seconds left)"
+            sleep 1
+            timeout=$((timeout-1))
+          done
+          echo "Service failed to become healthy"
+          docker logs order-service
+          exit 1
+          
+      - name: Cleanup
+        if: always()
+        run: docker rm -f order-service || true
+
+  security-scan:
+    needs: [test-frontend, test-product-service, test-order-service]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Trivy
+        run: |
+          sudo apt-get install wget apt-transport-https gnupg lsb-release -y
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy -y
+
+      - name: Scan images
+        run: |
+          set -e  # Exit immediately if a command exits with a non-zero status
+          
+          echo "Scanning frontend image..."
+          trivy image \
+            --exit-code 1 \
+            --no-progress \
+            --ignore-unfixed \
+            --severity HIGH,CRITICAL \
+            frontend:${{ needs.setup.outputs.commit_hash }}
+          
+          echo "Scanning product service image..."
+          trivy image \
+            --exit-code 1 \
+            --no-progress \
+            --ignore-unfixed \
+            --severity HIGH,CRITICAL \
+            product-service:${{ needs.setup.outputs.commit_hash }}
+          
+          echo "Scanning order service image..."
+          trivy image \
+            --exit-code 1 \
+            --no-progress \
+            --ignore-unfixed \
+            --severity HIGH,CRITICAL \
+            order-service:${{ needs.setup.outputs.commit_hash }}
+          
+      - name: Generate Vulnerability Report
+        if: failure()
+        run: |
+          echo "Generating detailed vulnerability reports..."
+          mkdir -p reports
+          
+          trivy image \
+            --format json \
+            --output reports/frontend-vulns.json \
+            --ignore-unfixed \
+            --severity HIGH,CRITICAL \
+            frontend:${{ needs.setup.outputs.commit_hash }} || true
+          
+          trivy image \
+            --format json \
+            --output reports/product-service-vulns.json \
+            --ignore-unfixed \
+            --severity HIGH,CRITICAL \
+            product-service:${{ needs.setup.outputs.commit_hash }} || true
+          
+          trivy image \
+            --format json \
+            --output reports/order-service-vulns.json \
+            --ignore-unfixed \
+            --severity HIGH,CRITICAL \
+            order-service:${{ needs.setup.outputs.commit_hash }} || true
+          
+          echo "::error::Security vulnerabilities found. Check the generated reports for details."
+          exit 1
+
+  deploy:
+    needs: [security-scan, setup]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && needs.security-scan.result == 'success'
+    environment: ${{ needs.setup.outputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      frontend_image: ${{ steps.push-images.outputs.frontend_image }}
+      product_service_image: ${{ steps.push-images.outputs.product_service_image }}
+      order_service_image: ${{ steps.push-images.outputs.order_service_image }}
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set environment name and tag suffix
-        id: env
-        run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "ENV_NAME=prod" >> $GITHUB_OUTPUT
-            echo "TAG_SUFFIX=prod" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
-            echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
-            echo "TAG_SUFFIX=staging" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
-            echo "ENV_NAME=dev" >> $GITHUB_OUTPUT
-            echo "TAG_SUFFIX=dev" >> $GITHUB_OUTPUT
-          else
-            echo "Invalid branch for deployment" && exit 1
-          fi
-
-      - name: Configure AWS Credentials
+      
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::767397741479:role/github-actions-role
           aws-region: ${{ env.AWS_REGION }}
-
+          
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image to ECR
-        id: build-push
+      - name: Push images to ECR
+        id: push-images
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: microstore
-          IMAGE_TAG: ${{ matrix.service }}-${{ steps.env.outputs.TAG_SUFFIX }}-${{ github.sha }}
+          REPOSITORY: ${{ env.ECR_REPOSITORY }}
+          COMMIT_HASH: ${{ needs.setup.outputs.commit_hash }}
+          ENV: ${{ needs.setup.outputs.environment }}
         run: |
-          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG ./${{ matrix.service }}/.
+          # Tag and push frontend
+          docker tag frontend:${COMMIT_HASH} ${REGISTRY}/${REPOSITORY}:frontend-${ENV}-${COMMIT_HASH}
+          docker push ${REGISTRY}/${REPOSITORY}:frontend-${ENV}-${COMMIT_HASH}
+          echo "frontend_image=${REGISTRY}/${REPOSITORY}:frontend-${ENV}-${COMMIT_HASH}" >> $GITHUB_OUTPUT
           
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image \
-            --exit-code 1 \
-            --ignore-unfixed \
-            --vuln-type os,library \
-            --severity HIGH,CRITICAL \
-            $REGISTRY/$REPOSITORY:$IMAGE_TAG
-            
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-          echo "${{ matrix.service }}_IMAGE_URI=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          # Tag and push product-service
+          docker tag product-service:${COMMIT_HASH} ${REGISTRY}/${REPOSITORY}:product-service-${ENV}-${COMMIT_HASH}
+          docker push ${REGISTRY}/${REPOSITORY}:product-service-${ENV}-${COMMIT_HASH}
+          echo "product_service_image=${REGISTRY}/${REPOSITORY}:product-service-${ENV}-${COMMIT_HASH}" >> $GITHUB_OUTPUT
+          
+          # Tag and push order-service
+          docker tag order-service:${COMMIT_HASH} ${REGISTRY}/${REPOSITORY}:order-service-${ENV}-${COMMIT_HASH}
+          docker push ${REGISTRY}/${REPOSITORY}:order-service-${ENV}-${COMMIT_HASH}
+          echo "order_service_image=${REGISTRY}/${REPOSITORY}:order-service-${ENV}-${COMMIT_HASH}" >> $GITHUB_OUTPUT
 
   update-gitops:
-    needs: deploy
+    needs: [deploy, setup]
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
+    environment: ${{ needs.setup.outputs.environment }}
+    permissions:
+      contents: write
+      pull-requests: write
+    
     steps:
-      - name: Set environment name
-        id: env
-        run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "ENV_NAME=prod" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
-            echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
-            echo "ENV_NAME=dev" >> $GITHUB_OUTPUT
-          else
-            echo "Invalid branch for deployment" && exit 1
-          fi
-
       - name: Checkout GitOps repository
         uses: actions/checkout@v4
         with:
           repository: nadavcool543/gitops-repo
           token: ${{ secrets.GITOPS_PAT }}
           path: gitops-repo
-
-      - name: Install yq
-        run: |
-          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-          sudo chmod a+x /usr/local/bin/yq
-
-      - name: Update image tags in values.yaml
-        run: |
-          cd gitops-repo/environments/${{ steps.env.outputs.ENV_NAME }}
           
-          yq eval ".services.frontend.image = \"${{ needs.deploy.outputs.frontend_IMAGE_URI }}\"" -i values.yaml
-          yq eval ".services.product.image = \"${{ needs.deploy.outputs.product-service_IMAGE_URI }}\"" -i values.yaml
-          yq eval ".services.order.image = \"${{ needs.deploy.outputs.order-service_IMAGE_URI }}\"" -i values.yaml
-
-      - name: Commit and push changes
+      - name: Update values.yaml
+        env:
+          FRONTEND_IMAGE: ${{ needs.deploy.outputs.frontend_image }}
+          PRODUCT_SERVICE_IMAGE: ${{ needs.deploy.outputs.product_service_image }}
+          ORDER_SERVICE_IMAGE: ${{ needs.deploy.outputs.order_service_image }}
+          ENV: ${{ needs.setup.outputs.environment }}
         run: |
-          cd gitops-repo
+          cd gitops-repo/environments/${ENV}
+          # Create a new branch for the changes
+          git checkout -b update-images-${ENV}-${{ needs.setup.outputs.commit_hash }}
+          
+          # Update image values using sed
+          sed -i "s|image:.*frontend.*|image: $FRONTEND_IMAGE|" values.yaml
+          sed -i "s|image:.*product-service.*|image: $PRODUCT_SERVICE_IMAGE|" values.yaml
+          sed -i "s|image:.*order-service.*|image: $ORDER_SERVICE_IMAGE|" values.yaml
+          
+          # Commit and push changes
           git config --global user.name 'GitHub Actions'
-          git config --global user.email 'actions@github.com'
-          git add .
-          git commit -m "Update ${{ steps.env.outputs.ENV_NAME }} environment images to ${{ github.sha }}"
-          git push
+          git config --global user.email 'github-actions@github.com'
+          git add values.yaml
+          git commit -m "Update ${ENV} environment images to ${{ needs.setup.outputs.commit_hash }}"
+          git push origin update-images-${ENV}-${{ needs.setup.outputs.commit_hash }}
+          
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITOPS_PAT }}
+          path: gitops-repo
+          commit-message: "Update ${{ needs.setup.outputs.environment }} environment images to ${{ needs.setup.outputs.commit_hash }}"
+          title: "Update ${{ needs.setup.outputs.environment }} environment images"
+          body: |
+            This PR updates the following images in the ${{ needs.setup.outputs.environment }} environment:
+            - Frontend: ${{ needs.deploy.outputs.frontend_image }}
+            - Product Service: ${{ needs.deploy.outputs.product_service_image }}
+            - Order Service: ${{ needs.deploy.outputs.order_service_image }}
+          branch: update-images-${{ needs.setup.outputs.environment }}-${{ needs.setup.outputs.commit_hash }}
+          base: main
+          delete-branch: true
