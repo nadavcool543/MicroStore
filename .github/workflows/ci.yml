@@ -94,42 +94,19 @@ jobs:
           IMAGE_TAG: ${{ matrix.service }}-${{ steps.env.outputs.TAG_SUFFIX }}-${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG ./${{ matrix.service }}/.
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
           
-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image \
+            --exit-code 1 \
+            --ignore-unfixed \
+            --vuln-type os,library \
+            --severity HIGH,CRITICAL \
+            $REGISTRY/$REPOSITORY:$IMAGE_TAG
+            
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
           echo "${{ matrix.service }}_IMAGE_URI=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-  security-scan:
-    runs-on: ubuntu-latest
-    needs: deploy
-    if: github.event_name == 'push'
-    strategy:
-      matrix:
-        service: [frontend, product-service, order-service]
-    steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image: ${{ needs.deploy.outputs[format('{0}_IMAGE_URI', matrix.service)] }}
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-
   update-gitops:
-    needs: security-scan
+    needs: deploy
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
