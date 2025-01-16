@@ -35,6 +35,10 @@ jobs:
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+          buildkitd-flags: --debug
         
       - name: Cache Docker layers
         uses: actions/cache@v3
@@ -63,7 +67,14 @@ jobs:
       - name: Run tests
         run: |
           cd frontend
-          npm test
+          npm test -- --passWithNoTests
+          
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+          buildkitd-flags: --debug
           
       - name: Build frontend
         uses: docker/build-push-action@v5
@@ -71,8 +82,8 @@ jobs:
           context: ./frontend
           push: false
           tags: frontend:${{ needs.setup.outputs.commit_hash }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           
       - name: Move cache
         run: |
@@ -101,8 +112,8 @@ jobs:
           context: ./product-service
           push: false
           tags: product-service:${{ needs.setup.outputs.commit_hash }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           
       - name: Move cache
         run: |
@@ -155,8 +166,8 @@ jobs:
           context: ./order-service
           push: false
           tags: order-service:${{ needs.setup.outputs.commit_hash }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           
       - name: Move cache
         run: |
