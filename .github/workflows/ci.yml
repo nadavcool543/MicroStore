@@ -101,65 +101,46 @@ jobs:
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
           echo "${{ matrix.service }}_IMAGE_URI=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-  update-gitops:
-    needs: deploy
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    steps:
-      - name: Set environment name
-        id: env
-        run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "ENV_NAME=prod" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
-            echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
-            echo "ENV_NAME=dev" >> $GITHUB_OUTPUT
-          else
-            echo "Invalid branch for deployment" && exit 1
-          fi
-      - name: Checkout GitOps repository
-        uses: actions/checkout@v4
-        with:
-          repository: nadavcool543/gitops-repo
-          token: ${{ secrets.GITOPS_PAT }}
-          path: gitops-repo
-
-      - name: Prepare git configuration
-        run: |
-          git config --global --add safe.directory /home/runner/work/MicroStore/MicroStore
-          git config --global user.email "noreply@github.com"
-          git config --global user.name "GitHub Actions"
-        working-directory: gitops-repo
-
-      - name: Install yq
-        run: |
-          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-          sudo chmod a+x /usr/local/bin/yq
-        working-directory: gitops-repo
-
-      - name: Update image tags in values.yaml
-        run: |
-          cd environments/${{ steps.env.outputs.ENV_NAME }}
-          
-          yq eval ".services.frontend.image = \"${{ needs.deploy.outputs.frontend_IMAGE_URI }}\"" -i values.yaml
-          yq eval ".services.product.image = \"${{ needs.deploy.outputs.product-service_IMAGE_URI }}\"" -i values.yaml
-          yq eval ".services.order.image = \"${{ needs.deploy.outputs.order-service_IMAGE_URI }}\"" -i values.yaml
-        working-directory: gitops-repo
-
-      - name: Create PR for changes
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITOPS_PAT }}
-          commit-message: Update ${{ steps.env.outputs.ENV_NAME }} environment images to ${{ github.sha }}
-          title: 'Auto-update ${{ steps.env.outputs.ENV_NAME }} images'
-          body: 'This PR updates the image tags in the GitOps repository for the ${{ steps.env.outputs.ENV_NAME }} environment.'
-          branch: auto-update-${{ steps.env.outputs.ENV_NAME }}-${{ github.sha }}
-          base: main
-          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
-          author: nadavcool543 <6024576+nadavcool543@users.noreply.github.com>
-          signoff: false
-          delete-branch: false
-          sign-commits: false
-          draft: false
-          maintainer-can-modify: true
+          update-gitops:
+            needs: deploy
+            runs-on: ubuntu-latest
+            if: github.event_name == 'push'
+            steps:
+              - name: Set environment name
+                id: env
+                run: |
+                  if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+                    echo "ENV_NAME=prod" >> $GITHUB_OUTPUT
+                  elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+                    echo "ENV_NAME=staging" >> $GITHUB_OUTPUT
+                  elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+                    echo "ENV_NAME=dev" >> $GITHUB_OUTPUT
+                  else
+                    echo "Invalid branch for deployment" && exit 1
+                  fi
+              - name: Checkout GitOps repository
+                uses: actions/checkout@v4
+                with:
+                  repository: nadavcool543/gitops-repo
+                  token: ${{ secrets.GITOPS_PAT }}
+                  path: gitops-repo
+        
+              - name: Install yq
+                run: |
+                  sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+                  sudo chmod a+x /usr/local/bin/yq
+              - name: Update image tags in values.yaml
+                run: |
+                  cd gitops-repo/environments/${{ steps.env.outputs.ENV_NAME }}
+                  
+                  yq eval ".services.frontend.image = \"${{ needs.deploy.outputs.frontend_IMAGE_URI }}\"" -i values.yaml
+                  yq eval ".services.product.image = \"${{ needs.deploy.outputs.product-service_IMAGE_URI }}\"" -i values.yaml
+                  yq eval ".services.order.image = \"${{ needs.deploy.outputs.order-service_IMAGE_URI }}\"" -i values.yaml
+              - name: Commit and push changes
+                run: |
+                  cd gitops-repo
+                  git config --global user.name 'GitHub Actions'
+                  git config --global user.email 'actions@github.com'
+                  git add .
+                  git commit -m "Update ${{ steps.env.outputs.ENV_NAME }} environment images to ${{ github.sha }}"
+                  git push
